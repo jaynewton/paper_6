@@ -17,6 +17,9 @@ da_m_lm <- merge(da_m_lm,da_cosk_5y,by=c("ym","SecCode"))
 da_m_lm[illiq!=0,`:=`(size=log(size),BM=log(BM),illiq=log(illiq),ivol=log(ivol))]
 da_m_lm <- da_m_lm[order(ym,SecCode),]
 
+da_m_lm[,cor(max_ret,individual)]
+da_m_lm[,cor(max_ret,max_ret*individual)]
+
 #### The Regression Part
 lm_fit_nw <- function(model,nv) { # nw denotes Newey-West HAC t statistic
   # nv denotes numbers of variables
@@ -31,32 +34,33 @@ lm_fit_nw <- function(model,nv) { # nw denotes Newey-West HAC t statistic
 }
 
 ####  
-lm_1 <- lmList(ret_e ~ I(max_ret*port_1)+I(max_ret*port_2)+I(max_ret*port_3)
+
+lm_1 <- lmList(ret_e ~ max_ret | ym , data=da_m_lm)
+lm_fit_nw(lm_1,1)
+
+lm_2 <- lmList(ret_e ~ I(max_ret*port_1)+I(max_ret*port_2)+I(max_ret*port_3)
                +I(max_ret*port_4)+I(max_ret*port_5)| ym , data=da_m_lm)
-lm_fit_nw(lm_1,5)
+lm_fit_nw(lm_2,5)
 
-lm_2 <- lmList(ret_e ~ individual| ym , data=da_m_lm)
-lm_fit_nw(lm_2,1)
-
-lm_3 <- lmList(ret_e ~ I(max_ret*port_1)+I(max_ret*port_2)+I(max_ret*port_3)
-               +I(max_ret*port_4)+I(max_ret*port_5)+individual| ym , data=da_m_lm)
-lm_fit_nw(lm_3,6)
+lm_3 <- lmList(ret_e ~ individual| ym , data=da_m_lm)
+lm_fit_nw(lm_3,1)
 
 lm_4 <- lmList(ret_e ~ I(max_ret*port_1)+I(max_ret*port_2)+I(max_ret*port_3)
-               +I(max_ret*port_4)+I(max_ret*port_5)+individual+be+size+BM| ym , data=da_m_lm)
-lm_fit_nw(lm_4,9)
+               +I(max_ret*port_4)+I(max_ret*port_5)+individual| ym , data=da_m_lm)
+lm_fit_nw(lm_4,6)
 
 lm_5 <- lmList(ret_e ~ I(max_ret*port_1)+I(max_ret*port_2)+I(max_ret*port_3)
-               +I(max_ret*port_4)+I(max_ret*port_5)+individual+be+size+BM+mom| ym , data=da_m_lm)
-lm_fit_nw(lm_5,10)
+               +I(max_ret*port_4)+I(max_ret*port_5)+individual+be+size+BM| ym , data=da_m_lm)
+lm_fit_nw(lm_5,9)
 
 lm_6 <- lmList(ret_e ~ I(max_ret*port_1)+I(max_ret*port_2)+I(max_ret*port_3)
-               +I(max_ret*port_4)+I(max_ret*port_5)+individual+be+size+BM+mom+ret_tm+illiq| ym , data=da_m_lm)
-lm_fit_nw(lm_6,12)
+               +I(max_ret*port_4)+I(max_ret*port_5)+individual+be+size+BM+mom| ym , data=da_m_lm)
+lm_fit_nw(lm_6,10)
 
 lm_7 <- lmList(ret_e ~ I(max_ret*port_1)+I(max_ret*port_2)+I(max_ret*port_3)
+               +I(max_ret*port_4)+I(max_ret*port_5)+individual+be+size+BM+mom+ret_tm+illiq| ym , data=da_m_lm)
+lm_fit_nw(lm_7,12)
+
+lm_8 <- lmList(ret_e ~ I(max_ret*port_1)+I(max_ret*port_2)+I(max_ret*port_3)
                +I(max_ret*port_4)+I(max_ret*port_5)+individual+be+size+BM+mom+ret_tm+illiq+ivol+isk+cosk_2| ym , data=da_m_lm)
-lm_fit_nw(lm_7,15)
-
-
-
+lm_fit_nw(lm_8,15)

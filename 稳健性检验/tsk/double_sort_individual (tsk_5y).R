@@ -1,20 +1,13 @@
 #################################
-#### Independent Double Sort
+#### Double Sort
 load("F:/我的论文/第五篇/RData/da_all_m.RData")
 load("F:/我的论文/第五篇/主代码/individual investor preference/RData/da_individual_m.RData")
-load("F:/我的论文/第五篇/RData/da_realized_m.RData")
+load("F:/我的论文/第五篇/主代码/individual investor preference/RData/da_tsk_5y.RData")
 load("F:/我的论文/第五篇/RData/FF3F_A_nm.RData")
 
-da_all_m <- da_all_m[,.(ym,SecCode,ret_e,size)]
-da_individual_m <- da_individual_m[,.(ym,SecCode,group_individual)]
-da_m <- merge(da_all_m,da_individual_m,by=c("ym","SecCode")) 
-da_m <- merge(da_m,da_realized_m[,.(ym,SecCode,rsk)],by=c("ym","SecCode")) 
-
-da_m[,group_rsk:=ifelse(rsk<=quantile(rsk,0.2),1,
-                        ifelse(rsk<=quantile(rsk,0.4),2,
-                               ifelse(rsk<=quantile(rsk,0.6),3,
-                                      ifelse(rsk<=quantile(rsk,0.8),4,
-                                             5)))),by=ym]
+da_m <- da_all_m[,.(ym,SecCode,ret_e,size)]
+da_m <- merge(da_m,da_individual_m,by=c("ym","SecCode")) 
+da_m <- merge(da_m,da_tsk_5y,by=c("ym","SecCode")) 
 
 ####
 ym_index <- sort(unique(da_m$ym))
@@ -24,21 +17,38 @@ ret_p <- array(NA,c(length(ym_index),k,k)) # p denotes portfolio
 # the second k corresponds to the number of groups of control variable
 # i,p and j corresponds to 1:length(ym_index), the first k and the second k below
 
-#### Method 1: use data.table
-# the speed is quite fast
 for (i in 1:length(ym_index)) {
-  da_ret_e <- da_m[ym==ym_index[i],.(ret_e=mean(ret_e)),keyby=.(group_rsk,group_individual)]
-  #da_ret_e <- da_m[ym==ym_index[i],.(ret_e=weighted.mean(ret_e,size)),keyby=.(group_rsk,group_individual)]
-  ret_p[i,,] <- as.matrix(dcast(da_ret_e, group_rsk ~ group_individual, value.var="ret_e")[,-"group_rsk"])
-}
-
-#### Method 2: use three-layer loop structure
-# direct but low-speed
-for (i in 1:length(ym_index)) {
-  for (p in 1:k) {
-    for (j in 1:k) {
-      ret_p[i,p,j] <- da_m[ym==ym_index[i] & group_rsk==p & group_individual==j,mean(ret_e)]
-      #ret_p[i,p,j] <- da_m[ym==ym_index[i] & group_rsk==p & group_individual==j,weighted.mean(ret_e,size)]
+  da_sub <- da_m[ym==ym_index[i],]
+  # Below is the control variable.
+  da_sub <- da_sub[order(individual),]
+  n_mid <- floor(nrow(da_sub)/k)
+  if ((nrow(da_sub)-n_mid*(k-2))%%2==0){
+    n_f <- (nrow(da_sub)-n_mid*(k-2))/2 # f denotes first, l denotes last
+    n_l <- n_f
+  } else {
+    n_f <- (nrow(da_sub)-n_mid*(k-2)-1)/2
+    n_l <- n_f+1
+  }
+  x <- seq(from=n_f,to=nrow(da_sub),by=n_mid)[1:(k-1)]
+  x <- c(x,nrow(da_sub))
+  da_sub$group_n1 <- cut(1:nrow(da_sub), c(0,x),labels = 1:k)
+  for (j in 1:k) {
+    da_ss <- da_sub[group_n1==j,] # ss denotes the subset of the subset
+    da_ss <- da_ss[order(tsk),] # the variable of interest
+    n_mid <- floor(nrow(da_ss)/k)
+    if ((nrow(da_ss)-n_mid*(k-2))%%2==0){
+      n_f <- (nrow(da_ss)-n_mid*(k-2))/2 # f denotes the first, l the denotes last
+      n_l <- n_f
+    } else {
+      n_f <- (nrow(da_ss)-n_mid*(k-2)-1)/2
+      n_l <- n_f+1
+    }
+    x <- seq(from=n_f,to=nrow(da_ss),by=n_mid)[1:(k-1)]
+    x <- c(x,nrow(da_ss))
+    da_ss$group_n2 <- cut(1:nrow(da_ss), c(0,x),labels = 1:k)
+    for (p in 1:k) {
+      ret_p[i,p,j] <- da_ss[group_n2==p,mean(ret_e)]
+      #ret_p[i,p,j] <- da_ss[group_n2==p,weighted.mean(ret_e,size)]
     }
   }
 }
@@ -92,4 +102,3 @@ for (j in 1:(k+1)) { # the first column is the corresponding ym
   ret_p_hl_FF3F[2,j] <- coeftest(model_FF3F,vcov=NeweyWest(model_FF3F))[1,3]
 }
 ret_p_hl_FF3F
-

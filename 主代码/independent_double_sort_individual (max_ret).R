@@ -72,14 +72,14 @@ for (j in 1:k) {
 }
 
 ## For the sixth t value
-ret_p_hl_average <- rowMeans((ret_p[,k,1:k]))-rowMeans((ret_p[,1,1:k]))
+ret_p_hl_average <- rowMeans(ret_p[,k,1:k],na.rm=T)-rowMeans(ret_p[,1,1:k],na.rm=T)
 model_nm <- lm(ret_p_hl_average ~ 1)
 t_nm[k+1] <- coeftest(model_nm,vcov = NeweyWest(model_nm))[1,3]
 t_nm
 
 #### adjusted by FF3F
 ret_p_hl <- cbind(ret_p_hl,ret_p_hl_average)
-ret_p_hl <- na.omit(as.data.table(ret_p_hl))
+ret_p_hl <- as.data.table(ret_p_hl)
 names(ret_p_hl) <- c(paste0("p",1:k),"average")
 ret_p_hl$ym <- sort(unique(da_m$ym))
 ret_p_hl <- merge(ret_p_hl,FF3F_A_nm,by="ym")
@@ -122,14 +122,16 @@ for (i in 1:length(ym_index)) {
   ret_p[i,,] <- as.matrix(dcast(da_sample_n, group_max ~ group_individual, value.var="sample_n")[,-"group_max"])
 }
 
-ret_p_m <- matrix(NA,nrow=k,ncol=k)
-colnames(ret_p_m) <- c(paste0("cv",1:k)) # cv denotes control variables
+ret_p_m <- matrix(NA,nrow=k,ncol=k+1)
+colnames(ret_p_m) <- c(paste0("cv",1:k),"average") # cv denotes control variables
 rownames(ret_p_m) <- c(paste0("voi",1:k)) # voi denotes variables of interest, here it's rsj
 for (p in 1:k) {
   for (j in 1:k) {
     ret_p_m[p,j] <- mean(ret_p[,p,j],na.rm=T) # full sample
   }
 }
+ret_p_m[1:k,k+1] <- rowMeans(ret_p_m[1:k,1:k])
+
 ret_p_m
 
 #################################
@@ -207,7 +209,7 @@ for (j in 1:k_2) {
 }
 
 ## For the sixth t value
-ret_p_hl_average <- rowMeans((ret_p[,k_1,1:k_2]))-rowMeans((ret_p[,1,1:k_2]))
+ret_p_hl_average <- rowMeans(ret_p[,k_1,1:k_2],na.rm=T)-rowMeans(ret_p[,1,1:k_2],na.rm=T)
 model_nm <- lm(ret_p_hl_average ~ 1)
 t_nm[k_2+1] <- coeftest(model_nm,vcov = NeweyWest(model_nm))[1,3]
 t_nm
@@ -215,7 +217,7 @@ t_nm
 #### adjusted by FF3F
 FF3F_nm <- copy(FF3F_A_nm)
 ret_p_hl <- cbind(ret_p_hl,ret_p_hl_average)
-ret_p_hl <- na.omit(as.data.table(ret_p_hl))
+ret_p_hl <- as.data.table(ret_p_hl)
 names(ret_p_hl) <- c(paste0("p",1:k_2),"average")
 ret_p_hl$ym <- sort(unique(da_m$ym))
 ret_p_hl <- merge(ret_p_hl,FF3F_nm,by="ym")
@@ -262,13 +264,14 @@ for (i in 1:length(ym_index)) {
   ret_p[i,,] <- as.matrix(dcast(da_sample_n, group_max ~ group_individual, value.var="sample_n")[,-"group_max"])
 }
 
-ret_p_m <- matrix(NA,nrow=k_1,ncol=k_2)
-colnames(ret_p_m) <- c(paste0("cv",1:k_2)) # cv denotes control variables
+ret_p_m <- matrix(NA,nrow=k_1,ncol=k_2+1)
+colnames(ret_p_m) <- c(paste0("cv",1:k_2),"average") # cv denotes control variables
 rownames(ret_p_m) <- c(paste0("voi",1:k_1)) # voi denotes variables of interest, here it's rsj
 for (p in 1:k_1) {
   for (j in 1:k_2) {
     ret_p_m[p,j] <- mean(ret_p[,p,j],na.rm=T) # full sample
   }
 }
+ret_p_m[1:k_1,k_2+1] <- rowMeans(ret_p_m[1:k_1,1:k_2])
 ret_p_m
 
